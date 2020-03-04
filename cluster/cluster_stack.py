@@ -1,5 +1,5 @@
 import constants
-import typing
+import typing, os
 from aws_cdk import (
     aws_ec2 as ec2,
     aws_rds as rds,
@@ -61,7 +61,7 @@ class RemoveRepoCustomResource(core.Construct):
             scope=self,
             id="RESOURCE-REMOVE-REPOSITORY",
             provider=cfn.CustomResourceProvider.from_lambda(
-                remove_repository_lambda),
+                handler=remove_repository_lambda),
             properties={'RepositoryName': repository_name},
         )
         self.response = resource.get_att("Response").to_string()
@@ -81,7 +81,7 @@ class RepoStack(core.Stack):
 
         self.es_repository = es_repository
 
-        resource = RemoveRepoCustomResource(
+        RemoveRepoCustomResource(
             scope=self,
             id="REMOVE-RESOURCE",
             remove_repository_lambda_arn=remove_repository_lambda_arn,
@@ -143,14 +143,14 @@ class BaseStack(core.Stack):
                         volume_size=100,
                     )),
                 ),
-                autoscaling.BlockDevice(
-                    device_name="/dev/xvdb",
-                    volume=autoscaling.BlockDeviceVolume(ebs_device=autoscaling.EbsDeviceProps(
-                        delete_on_termination=True,
-                        volume_type=autoscaling.EbsDeviceVolumeType.GP2,
-                        volume_size=50,
-                    )),
-                ),
+                # autoscaling.BlockDevice(
+                #     device_name="/dev/xvdb",
+                #     volume=autoscaling.BlockDeviceVolume(ebs_device=autoscaling.EbsDeviceProps(
+                #         delete_on_termination=True,
+                #         volume_type=autoscaling.EbsDeviceVolumeType.GP2,
+                #         volume_size=50,
+                #     )),
+                # ),
             ],
             vpc_subnets=ec2.SubnetSelection(
                 subnet_type=ec2.SubnetType.PRIVATE),
@@ -160,12 +160,9 @@ class BaseStack(core.Stack):
             min_capacity=2,
         )
 
-        user_data = '''
-sudo yum -y update && sudo sysctl -w vm.max_map_count=262144
-mkdir -p /usr/share/elasticsearch/data/
-chown -R 1000.1000 /usr/share/elasticsearch/data/
-sudo mount /dev/xvdb /usr/share/elasticsearch/data/
-'''
+        with open( os.path.join("ecs", "userData.sh" )) as f:
+            user_data = f.read()
+
         asg.add_user_data(user_data)
         cluster.add_auto_scaling_group(asg)
 

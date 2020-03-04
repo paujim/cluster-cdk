@@ -12,12 +12,12 @@ from cluster.cluster_stack import (
 
 app = core.App()
 
-helper_stack = HelperStack(app, "pj-helper")
+helper_stack = HelperStack(app, "helper")
 
-repo_stack = RepoStack(app, "pj-repo", helper_stack.remove_repository_lambda_arn)
-base = BaseStack(app, "pj-base")
-EsDockerComposeStack(app, "pj-es-dockercompose", base.vpc, base.cluster)
-EsDockerStack(app, "pj-es-docker", base.vpc, base.cluster, repo_stack.es_repository)
+repo_stack = RepoStack(app, "repo", helper_stack.remove_repository_lambda_arn)
+base = BaseStack(app, "base")
+EsDockerComposeStack(app, "es-dockercompose", base.vpc, base.cluster)
+EsDockerStack(app, "es-docker", base.vpc, base.cluster, repo_stack.es_repository)
 
 
 app.synth()
